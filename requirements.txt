@@ -27,7 +27,7 @@ tqdm==4.67.1
 # 📈 과학 및 통계 계산
 numpy>=1.26.0
 scipy==1.10.0
-scikit-learn-intelex==20230228.214242
+scikit-learn-intelex>=2024.5.0
 sympy==1.13.1
 dill==0.3.8
 
