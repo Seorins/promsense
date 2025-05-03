@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <title>Prompt Rewriter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script src="https://kit.fontawesome.com/926cac9937.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <link rel="stylesheet" href="/static/view.css">
+</head>
+<body class="bg-white text-dark" style="height: 100vh; display: flex; flex-direction: column;">
+
+<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999">
+  <div id="toastMessage" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastBody">
+        저장되었습니다!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<!-- nav -->
+<nav class="navbar bg-white border-bottom px-3" style="padding: 15px 0px;">
+  <a class="navbar-brand text-dark fw-bold" href="{% url 'home' %}">
+    <i class="fa-solid fa-comment-dots me-2"></i>PROMSENSE
+  </a>
+  <div class="ms-auto">
+    {% if user.is_authenticated %}
+      <div class="dropdown">
+        <button class="btn btn-outline-dark dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+          안녕하세요, {{ user.username }}님
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+          <li><a class="dropdown-item" href="{% url 'logout' %}">로그아웃</a></li>
+          <li><a class="dropdown-item" href="{% url 'profile' %}">내 정보</a></li>
+        </ul>
+      </div>
+    {% else %}
+      <a href="/login" class="btn btn-outline-dark">Login</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container-fluid flex-grow-1 d-flex flex-column flex-md-row main-content" style="overflow: hidden;">
+  <!-- Sidebar -->
+  <div class="col-12 col-md-2 sidebar bg-light border-end overflow-auto py-3">
+    <div class="px-3 mb-2">
+      <button class="btn btn-sm btn-dark w-100 d-flex justify-content-center align-items-center" style="height: 40px;" onclick="startNewChat()">
+        + New Chat
+      </button>
+    </div>
+    <h6 class="ms-2" style="padding: 10px 0;">📂 대화 기록</h6>
+    {% for session in chat_sessions %}
+      <a href="/?chat_id={{ session.chat_id }}" class="d-block px-3 py-1 small text-secondary list" style="height:40px; text-decoration: none;">
+        {{ session.initial_prompt|truncatechars:20 }}
+      </a>
+    {% empty %}
+      <div class="text-muted p-2">기록 없음</div>
+    {% endfor %}
+  </div>
+
+  <!-- Chat -->
+  <div class="col-12 col-md-10 d-flex flex-column chat" style="height: 100%;">
+    <div id="chat-box" class="flex-grow-1 overflow-auto px-4 py-3 bg-white">
+      {% if selected_chat %}
+        {% for message in selected_chat.history %}
+          {% if message.role == "user" %}
+            <div class="chat-bubble user">{{ message.content }}</div>
+          {% else %}
+            <div class="chat-bubble-wrapper">
+              <div class="d-flex align-items-center" style="gap: 10px;">
+                <div class="chat-bubble bot">
+                  <div class="chat-text {% if forloop.last %}typing-text{% endif %}" data-text="{{ message.content }}">{{ message.content }}</div>
+                </div>
+                <div class="like-heart" onclick="saveFinalPrompt('{{ selected_chat.chat_id }}', this)">
+                  <i class="fa-solid fa-heart"></i>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="d-flex flex-column justify-content-center align-items-center text-muted" style="height: 100%; font-weight: bold;">
+          <img src="{% static 'images/homerobot.gif' %}" alt="robot" style="width: 200px; height: 200px;">
+          <p><br>지금 바로 대화를 시작해보세요</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {% load static %}
+    <div class="d-flex align-items-center gap-2 justify-content-center mb-2">
+    
+      <div class="d-flex align-items-center gap-2" id="fixed-style">
+        <button id="style-toggle-btn" class="btn icon-btn" style="border-radius: 50%; width: 40px; height: 40px; font-size: 24px; vertical-align: middle; display: flex; justify-content: center; align-items: center;">
+          <img src="{% static 'images/goldenbell.png' %}" alt="벨 아이콘" style="width: 24px; height: 24px;">
+        </button>
+        <span id="style-text" style="font-weight: bold; font-size: 18px;">
+          {% if full_name %}
+            {{ full_name }}님 이런 스타일은 어떠세요?
+          {% else %}
+            이런 스타일은 어떠세요?
+          {% endif %}
+        </span>
+      </div>
+    
+    
+      <!-- 추천 스타일 버튼들 (초기에는 숨김) -->
+      <div id="style-buttons" class="d-flex gap-2 d-none">
+        {% for style in recommended_styles %}
+          <button type="button" class="btn style-btn" data-style="{{ style }}">
+            {{ style }}
+          </button>
+        {% endfor %}
+      </div>
+    
+    </div>
+
+    <!-- 입력 폼 -->
+    <form method="POST" action="{% if selected_chat %}/?chat_id={{ selected_chat.chat_id }}{% else %}/{% endif %}" class="d-flex gap-2 p-3 bg-white" style="position: sticky; bottom: 0; height: 150px;">
+      {% csrf_token %}
+      <input type="text" name="prompt" class="form-control bg-light text-dark border" placeholder="그리고 싶은 그림에 대해 적어주세요" required>
+      <button type="submit" class="btn btn-dark"><i class="fa-solid fa-arrow-up"></i></button>
+    </form>
+  </div>
+</div>
+
+<!-- Welcome Modal -->
+<div class="modal fade" id="welcomeModal" tabindex="-1" aria-labelledby="welcomeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center">
+
+      <!-- Carousel 시작 -->
+      <div id="welcomeCarousel" class="carousel slide" data-bs-ride="carousel">
+
+        <!-- 인디케이터 (동글이) -->
+        <div class="carousel-indicators">
+          <button type="button" data-bs-target="#welcomeCarousel" data-bs-slide-to="0" class="active"></button>
+          <button type="button" data-bs-target="#welcomeCarousel" data-bs-slide-to="1"></button>
+          <button type="button" data-bs-target="#welcomeCarousel" data-bs-slide-to="2"></button>
+          <button type="button" data-bs-target="#welcomeCarousel" data-bs-slide-to="3"></button> <!-- 추가 -->
+        </div>
+
+
+        <div class="carousel-inner">
+          <!-- 첫 번째 슬라이드 -->
+          <div class="carousel-item active">
+            <div style="width: 100%; height: 0; padding-bottom: 56.25%; position: relative; background-color: transparent;">
+              <img src="{% static 'images/popup1.gif' %}" alt="Robot" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          </div>
+        
+          <!-- 두 번째 슬라이드 -->
+          <div class="carousel-item">
+            <div style="width: 100%; height: 0; padding-bottom: 56.25%; position: relative; background-color: transparent;">
+              <img src="{% static 'images/popup2.gif' %}" alt="Robot" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          </div>
+        
+          <!-- 세 번째 슬라이드 -->
+          <div class="carousel-item">
+            <div style="width: 100%; height: 0; padding-bottom: 56.25%; position: relative; background-color: transparent;">
+              <img src="{% static 'images/popup3.png' %}" alt="Robot" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          </div>
+     
+
+          <!-- 네 번째 슬라이드 -->
+          <div class="carousel-item">
+            <div style="width: 100%; height: 0; padding-bottom: 56.25%; position: relative; background-color: transparent;">
+              <img src="{% static 'images/popup4.gif' %}" alt="Robot" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          </div>
+        </div>
+
+        
+        <!-- 좌우 화살표 -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#welcomeCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#welcomeCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+
+      </div>
+      <!-- Carousel 끝 -->
+
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+function startNewChat() {
+  fetch('/new_chat/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.chat_id) {
+      // ✅ 이제 chat_id가 정의됐으므로 localStorage 초기화 가능
+      localStorage.removeItem(`liked_prompt_${data.chat_id}`);
+      window.location.href = '/?chat_id=' + data.chat_id;
+    }
+  });
+}
+
+
+function saveFinalPrompt(chatId, heartElement) {
+  const heartIcon = heartElement.querySelector('i');
+
+  if (localStorage.getItem(`liked_prompt_${chatId}`)) {
+    showToast("이미 하트를 누르셨어요!", "danger");
+    return;
+  }
+
+  const chatBubbleWrapper = heartElement.closest('.chat-bubble-wrapper');
+
+  document.querySelectorAll('.reason-buttons').forEach(el => el.remove());
+
+  const allHearts = document.querySelectorAll('.like-heart i');
+  allHearts.forEach(icon => {
+    icon.classList.remove('liked');
+    icon.style.color = '#6c757d';
+  });
+
+  heartIcon.classList.add('liked');
+  heartIcon.style.color = 'red';
+
+  const responseText = chatBubbleWrapper.querySelector('.chat-text').innerText.trim();
+
+  const allResponses = Array.from(document.querySelectorAll('.chat-text'))
+    .filter(el => !el.classList.contains('user'))
+    .map(el => el.innerText.trim());
+
+  const reasonContainer = document.createElement('div');
+  reasonContainer.classList.add('reason-buttons', 'mt-2');
+
+  reasonContainer.innerHTML = `
+    <div style="padding:5px 20px;">
+      <p>왜 이 응답이 마음에 드셨나요?</p>
+      <div class="d-flex flex-wrap gap-2" style="margin-top:13px;">
+        <button class="btn btn-sm btn-outline-secondary reason-btn" data-response="${responseText}" data-reason="분위기가 마음에 듦">분위기가 마음에 듦</button>
+        <button class="btn btn-sm btn-outline-secondary reason-btn" data-response="${responseText}" data-reason="묘사가 구체적임">묘사가 구체적임</button>
+        <button class="btn btn-sm btn-outline-secondary reason-btn" data-response="${responseText}" data-reason="간결하고 직관적임">간결하고 직관적임</button>
+        <button class="btn btn-sm btn-outline-secondary reason-btn" data-response="${responseText}" data-reason="창의적이고 독창적임">창의적이고 독창적임</button>
+      </div>
+    </div>
+  `;
+
+  chatBubbleWrapper.insertAdjacentElement('afterend', reasonContainer);
+
+  reasonContainer.querySelectorAll('.reason-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const reason = button.getAttribute('data-reason');
+      const selectedPrompt = button.getAttribute('data-response');
+      
+      const chatBubbles = Array.from(document.querySelectorAll('.chat-bubble-wrapper'));
+      const index = chatBubbles.indexOf(chatBubbleWrapper);
+
+      fetch('/save_final_prompt/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          model_response: selectedPrompt,
+          model_outputs: allResponses,
+          reason: reason
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        localStorage.setItem(`liked_prompt_${chatId}`, JSON.stringify({
+          text: selectedPrompt,
+          index: index
+        }));
+        showToast("저장되었습니다!");
+        reasonContainer.remove();
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  });
+}
+
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  const typingElement = document.querySelector('.typing-text');
+  if (typingElement) {
+    const text = typingElement.getAttribute('data-text');
+    typingElement.innerHTML = '';
+    let i = 0;
+    function typing() {
+      if (i < text.length) {
+        typingElement.innerHTML += text.charAt(i);
+        i++;
+        setTimeout(typing, 40);  // 타이핑 속도 (조금 천천히)
+      }
+    }
+    typing();
+  }
+
+  const popupShown = sessionStorage.getItem("popup_shown");
+  if (!popupShown) {
+    const modal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+    modal.show();
+    sessionStorage.setItem("popup_shown", "true");
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+  const popupShown = sessionStorage.getItem("popup_shown");
+
+  if (!popupShown) {
+    const modal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+    modal.show();
+    sessionStorage.setItem("popup_shown", "true");
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+  const styleToggleBtn = document.getElementById('style-toggle-btn');
+  const styleButtons = document.getElementById('style-buttons');
+  const styleText = document.getElementById('style-text');
+  const inputField = document.querySelector('input[name="prompt"]');
+
+  if (styleToggleBtn && styleButtons && styleText) {
+    styleToggleBtn.addEventListener('click', function() {
+      console.log('Toggle 버튼 클릭됨!');
+      styleButtons.classList.toggle('d-none');
+
+      if (styleButtons.classList.contains('d-none')) {
+        styleText.style.display = 'inline';
+      } else {
+        styleText.style.display = 'none'; 
+      }
+    });
+
+    styleButtons.addEventListener('click', function(event) {
+      if (event.target.classList.contains('style-btn')) {
+        const style = event.target.getAttribute('data-style');
+        if (!inputField.value.startsWith(style)) {
+          inputField.value = style + inputField.value;
+        마이}
+      }
+    });
+  }
+});
+
+function goToPage(pageNumber) {
+  document.querySelectorAll('.modal-page').forEach(page => page.classList.add('d-none'));
+  document.getElementById('page-' + pageNumber).classList.remove('d-none');
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  requestAnimationFrame(() => {
+    restoreLikedHeart();
+  });
+});
+
+
+function restoreLikedHeart() {
+  const chatId = new URLSearchParams(window.location.search).get("chat_id");
+  const likedData = localStorage.getItem(`liked_prompt_${chatId}`);
+
+  if (likedData) {
+    try {
+      const { index } = JSON.parse(likedData);
+      const chatBubbles = Array.from(document.querySelectorAll('.chat-bubble-wrapper'));
+      const wrapper = chatBubbles[index];
+      if (wrapper) {
+        const heartIcon = wrapper.querySelector(".like-heart i");
+        if (heartIcon) {
+          heartIcon.classList.add("liked");
+          heartIcon.style.color = "red";
+        }
+      }
+    } catch (e) {
+      console.error("복원 중 오류:", e);
+    }
+  }
+}
+
+function showToast(message, type = 'success') {
+  const toastEl = document.getElementById('toastMessage');
+  const toastBody = document.getElementById('toastBody');
+
+  toastBody.textContent = message;
+
+  toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
+  toastEl.classList.add(`bg-${type}`);
+
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+}
+
+function showLoadingBubble(chatBox) {
+  const loadingWrapper = document.createElement("div");
+  loadingWrapper.className = "chat-bubble-wrapper";
+
+  loadingWrapper.innerHTML = `
+    <div class="d-flex align-items-center" style="gap: 10px;">
+      <div class="chat-bubble bot">
+        <div class="typing-text">
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          답변을 생성하는 중...
+        </div>
+      </div>
+    </div>
+  `;
+
+  chatBox.appendChild(loadingWrapper);
+
+  return loadingWrapper;
+}
+
+
+</script>
+</body>
+</html>
