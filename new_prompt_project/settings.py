@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.conf import settings
+import dj_database_url
 
 load_dotenv()  # .env 파일에서 환경변수 불러오기
 
@@ -34,6 +36,7 @@ SITE_ID = 1
 # --- 미들웨어 ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -66,10 +69,11 @@ WSGI_APPLICATION = 'new_prompt_project.wsgi.application'
 
 # --- DB (기본 SQLite) ---
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        # Render 환경변수에 설정된 DATABASE_URL 값을 자동으로 사용합니다.
+        # 로컬에서 DATABASE_URL 환경변수가 없을 경우 SQLite를 사용하도록 fallback 설정 (선택사항):
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
+    )
 }
 
 # --- 비밀번호 검사기 ---
@@ -107,3 +111,15 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'promsense.onrender.com', 'www.promsense.com']
+
+MEDIA_URL = '/media/'  # 미디어 파일에 접근할 URL 경로
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # 프로젝트의 기본 static 폴더
+    BASE_DIR / "main_app" / "static",  # main_app 내부의 static 폴더
+]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
