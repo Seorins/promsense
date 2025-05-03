@@ -356,3 +356,5 @@ zict==2.1.0
 zipp @ file:///croot/zipp_1672387121353/work
 zope.interface @ file:///home/builder/ci_310/zope.interface_1640811449297/work
 zstandard @ file:///croot/zstandard_1677013143055/work
+pandas>=2.0.0
+gunicorn>=21.2.0
