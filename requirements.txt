@@ -12,6 +12,8 @@ pandas>=1.5.3
 openpyxl>=3.0.10
 xlrd>=2.0.1
 et-xmlfile>=1.1.0
+cryptography>=3.4.8
+
 
 # 🧠 모델 추론 및 프롬프트 처리
 torch==2.6.0
