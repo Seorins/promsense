@@ -6,7 +6,6 @@ asgiref==3.8.1
 atomicwrites==1.4.0
 backports.weakref==1.0.post1
 brotlipy==0.7.0
-clyent==1.2.2
 constantly==15.1.0
 cssselect==1.1.0
 Cython==3.0.12
