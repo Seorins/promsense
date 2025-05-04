@@ -12,7 +12,7 @@ from .models import Conversation
 from django.http import JsonResponse
 from .forms import SignUpForm
 from django.views.decorators.csrf import csrf_exempt
-from .models import ChatSession
+from .models import ChatSession, SavedPrompt
 from django.contrib.auth.decorators import login_required
 from .forms import EditProfileForm
 from django.conf import settings
@@ -188,62 +188,49 @@ def reset_conversations(request):
         return redirect('home')
 
 
-@csrf_exempt
+@csrf_exempt # CSRF 관련 부분은 필요에 따라 유지 또는 수정
 def save_final_prompt(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return JsonResponse({'message': '비로그인 사용자는 저장할 수 없습니다.'}, status=403)
 
-        data = json.loads(request.body)
-        chat_id = data.get('chat_id')
-        selected_prompt = data.get('model_response')  # 사용자가 하트 누른 응답
-        model_outputs = data.get('model_outputs', [])  # 전체 모델 응답 리스트
-        reason = data.get('reason', '')  # 선택 이유 (버튼으로 받음)
+        try:
+            data = json.loads(request.body)
+            chat_id = data.get('chat_id')
+            selected_prompt = data.get('model_response')
+            model_outputs = data.get('model_outputs', [])
+            reason = data.get('reason', '')
 
-        session = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
-        initial_prompt = session.initial_prompt
-        if not initial_prompt:
-            return JsonResponse({'message': '초기 프롬프트 없음'}, status=400)
+            session = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
+            initial_prompt = session.initial_prompt
+            if not initial_prompt: # 초기 프롬프트가 있어야 의미있을 듯
+                 return JsonResponse({'message': '저장할 초기 프롬프트가 없습니다.'}, status=400)
+            if not selected_prompt:
+                 return JsonResponse({'message': '선택된 프롬프트가 없습니다.'}, status=400)
 
-        # ✅ 기존 JSONL 저장 방식 (주석 처리)
-        """
-        record = {
-            "short_prompt": initial_prompt,
-            "long_prompt": selected_prompt
-        }
 
-        save_dir = os.path.join('saved_prompts')
-        os.makedirs(save_dir, exist_ok=True)
+            # --- CSV 저장 로직 대신 아래 DB 저장 로직 사용 ---
+            SavedPrompt.objects.create(
+                user=request.user,
+                chat_session=session,
+                initial_prompt=initial_prompt,
+                selected_prompt=selected_prompt,
+                model_outputs=model_outputs,
+                reason=reason
+            )
+            # --- 여기까지 ---
 
-        save_path = os.path.join(save_dir, f"{request.user.id}_dataset.jsonl")
+            return JsonResponse({'message': '데이터베이스에 프롬프트가 저장되었습니다.'})
 
-        with open(save_path, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        """
-
-        # ✅ 새 CSV 저장 방식
-        save_dir = os.path.join('saved_prompts')
-        os.makedirs(save_dir, exist_ok=True)
-
-        save_path = os.path.join(save_dir, f"{request.user.id}_dataset.csv")
-        file_exists = os.path.isfile(save_path)
-
-        import csv
-        with open(save_path, 'a', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['user_id', 'user_input', 'model_outputs', 'selected_prompt', 'reason'])
-            writer.writerow([
-                request.user.id,
-                initial_prompt,
-                json.dumps(model_outputs, ensure_ascii=False),
-                selected_prompt,
-                reason
-            ])
-
-        return JsonResponse({'message': 'CSV에 프롬프트가 저장되었습니다.'})
+        except ChatSession.DoesNotExist:
+             return JsonResponse({'message': '채팅 세션을 찾을 수 없습니다.'}, status=404)
+        except Exception as e:
+            # 실제 서비스에서는 에러 로깅 등 필요
+            print(f"Error saving prompt: {e}") # 개발 중 에러 확인용
+            return JsonResponse({'message': '프롬프트 저장 중 오류가 발생했습니다.'}, status=500)
 
     return JsonResponse({'message': '잘못된 요청입니다.'}, status=400)
+
 
 
 @csrf_exempt
