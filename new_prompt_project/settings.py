@@ -134,3 +134,5 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 AUTH_USER_MODEL = 'main_app.CustomUser'
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+ = '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' 
