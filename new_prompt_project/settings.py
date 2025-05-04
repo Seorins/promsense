@@ -21,8 +21,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # 추가 앱
     'main_app',
     'django.contrib.sites',
     'allauth',
@@ -108,9 +106,13 @@ SOCIALACCOUNT_PROVIDERS = {
             'client_id': os.environ.get("GOOGLE_CLIENT_ID"),
             'secret': os.environ.get("GOOGLE_CLIENT_SECRET"),
             'key': ''
-        }
+        },
+        'SCOPE': ['email', 'profile'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
     }
 }
+
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'promsense.onrender.com', 'www.promsense.com']
 
@@ -123,3 +125,10 @@ STATICFILES_DIRS = [
 ]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+ACCOUNT_EMAIL_VERIFICATION = 'none' 
