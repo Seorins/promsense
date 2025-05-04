@@ -5,6 +5,4 @@ db.sqlite3
 .env
 .env.*
 env/
-*.xlsx
-*.csv
 venv/
