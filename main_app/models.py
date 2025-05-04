@@ -51,3 +51,22 @@ class ChatSession(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.chat_id}"
+    
+    # main_app/models.py 파일 맨 아래 등에 추가
+
+class SavedPrompt(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="사용자")
+    chat_session = models.ForeignKey(ChatSession, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="채팅 세션") # 어떤 채팅에서 저장했는지 연결 (선택사항)
+    initial_prompt = models.TextField(blank=True, verbose_name="초기 프롬프트")
+    selected_prompt = models.TextField(verbose_name="선택된 프롬프트(응답)")
+    model_outputs = models.JSONField(default=list, verbose_name="전체 모델 응답") # 전체 응답 목록 저장
+    reason = models.CharField(max_length=100, blank=True, verbose_name="선택 이유") # 선택 이유
+    saved_at = models.DateTimeField(auto_now_add=True, verbose_name="저장 시각")
+
+    def __str__(self):
+        return f"{self.user.username} - Saved Prompt {self.id}"
+
+    class Meta:
+        verbose_name = "저장된 프롬프트"
+        verbose_name_plural = "저장된 프롬프트 목록"
+        ordering = ['-saved_at']
