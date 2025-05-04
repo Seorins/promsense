@@ -58,7 +58,7 @@ msgpack==1.0.4
 multidict==6.4.3
 multiprocess==0.70.16
 numpy==1.26.4
-opencv-python==4.10.0
+opencv-python~=4.10.0
 openpyxl==3.0.10  # CSV 관련
 pandas==1.5.3  # CSV 관련
 packaging==23.0
