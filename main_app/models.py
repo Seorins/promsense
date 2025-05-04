@@ -12,18 +12,18 @@ class CustomUser(AbstractUser):
     address = models.CharField(max_length=255)
     address_detail = models.CharField(max_length=255)
 
-    # groups와 user_permissions의 related_name을 지정하여 충돌을 피함
-    groups = models.ManyToManyField(
-        Group,
-        related_name='customuser_set',  # 그룹의 역참조 이름을 지정
-        blank=True
-    )
+    # # groups와 user_permissions의 related_name을 지정하여 충돌을 피함
+    # groups = models.ManyToManyField(
+    #     Group,
+    #     related_name='customuser_set',  # 그룹의 역참조 이름을 지정
+    #     blank=True
+    # )
     
-    user_permissions = models.ManyToManyField(
-        Permission,
-        related_name='customuser_set',  # 사용자 권한의 역참조 이름을 지정
-        blank=True
-    )
+    # user_permissions = models.ManyToManyField(
+    #     Permission,
+    #     related_name='customuser_set',  # 사용자 권한의 역참조 이름을 지정
+    #     blank=True
+    # )
 
     def __str__(self):
         return self.username
