@@ -1,0 +1,5 @@
+venv/lib/icx-lto.so filter=lfs diff=lfs merge=lfs -text
+venv/lib/libmkl_avx512.so.2 filter=lfs diff=lfs merge=lfs -text
+venv/lib/libmkl_core.so.2 filter=lfs diff=lfs merge=lfs -text
+venv/lib/libintelocl.so filter=lfs diff=lfs merge=lfs -text
+venv/lib/libcommon_clang.so filter=lfs diff=lfs merge=lfs -text

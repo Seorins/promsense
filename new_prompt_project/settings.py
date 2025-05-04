@@ -65,11 +65,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'new_prompt_project.wsgi.application'
 
-# --- DB (기본 SQLite) ---
+
 DATABASES = {
     'default': dj_database_url.config(
-        # Render 환경변수에 설정된 DATABASE_URL 값을 자동으로 사용합니다.
-        # 로컬에서 DATABASE_URL 환경변수가 없을 경우 SQLite를 사용하도록 fallback 설정 (선택사항):
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
     )
 }
