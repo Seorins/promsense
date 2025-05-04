@@ -6,7 +6,7 @@ charset-normalizer==3.4.1
 cryptography==44.0.2
 dj-database-url==2.3.0
 Django==5.2
-django-allauth==65.7.0
+django-allauth==65.6.0
 et_xmlfile==2.0.0
 gunicorn==23.0.0
 idna==3.10
