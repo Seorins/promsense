@@ -15,8 +15,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import ChatSession
 from django.contrib.auth.decorators import login_required
 from .forms import EditProfileForm
+from django.conf import settings
 
-style_df = pd.read_excel('style_category.xlsx')
+file_path = os.path.join(settings.BASE_DIR, 'style_category.xlsx')
+style_df = pd.read_excel(file_path)
 style_list = style_df['Category'].dropna().unique().tolist()
 
 

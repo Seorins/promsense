@@ -3,13 +3,27 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser, Group, Permission
 
 class CustomUser(AbstractUser):
     full_name = models.CharField(max_length=100)
-    birth_date = models.DateField(null=True, blank=True)  # 필드를 선택 사항으로 설정
+    birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=[('M', '남자'), ('F', '여자')])
     address = models.CharField(max_length=255)
-    address_detail = models.CharField(max_length=255)  # 상세주소
+    address_detail = models.CharField(max_length=255)
+
+    # groups와 user_permissions의 related_name을 지정하여 충돌을 피함
+    groups = models.ManyToManyField(
+        Group,
+        related_name='customuser_set',  # 그룹의 역참조 이름을 지정
+        blank=True
+    )
+    
+    user_permissions = models.ManyToManyField(
+        Permission,
+        related_name='customuser_set',  # 사용자 권한의 역참조 이름을 지정
+        blank=True
+    )
 
     def __str__(self):
         return self.username
