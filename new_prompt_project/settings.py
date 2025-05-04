@@ -134,5 +134,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 AUTH_USER_MODEL = 'main_app.CustomUser'
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# .env 파일을 로드하여 환경 변수에 값을 설정
+load_dotenv()
 
- = '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' 
+# 환경 변수에서 를 가져옵니다.
+ = os.getenv('')
