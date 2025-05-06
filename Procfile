@@ -1,0 +1,1 @@
+web: gunicorn new_prompt_project.wsgi

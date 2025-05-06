@@ -4,14 +4,16 @@ from dotenv import load_dotenv
 from django.conf import settings
 import dj_database_url
 
-load_dotenv()  # .env 파일에서 환경변수 불러오기
+# .env 파일을 로드하여 환경 변수에 값을 설정
+load_dotenv()
 
 # --- 기본 설정 ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "fallback-secret-key")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") # 기본값 추가 권장
+HF_API_KEY = os.getenv('HF_API_TOKEN') # 여기서 읽어도 되고, 필요할 때 읽어도 됨
 
 # --- 앱 등록 ---
 INSTALLED_APPS = [
@@ -67,9 +69,10 @@ WSGI_APPLICATION = 'new_prompt_project.wsgi.application'
 
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # 프로젝트 루트에 db.sqlite3 파일 생성
+    }
 }
 
 # --- 비밀번호 검사기 ---
@@ -132,10 +135,3 @@ AUTHENTICATION_BACKENDS = (
 ACCOUNT_EMAIL_VERIFICATION = 'none' 
 
 AUTH_USER_MODEL = 'main_app.CustomUser'
-
-STATICFILES_DIRS = [BASE_DIR / "static"]
-# .env 파일을 로드하여 환경 변수에 값을 설정
-load_dotenv()
-
-# 환경 변수에서 를 가져옵니다.
- = os.getenv('')
