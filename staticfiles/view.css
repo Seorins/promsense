@@ -74,7 +74,7 @@ body {
 }
 
 .user {
-  background-color: #e04a3f;
+  background-color: #df4314;
   color: white;
   float: right;
   clear: both;
@@ -228,11 +228,11 @@ input[type="text"] {
 }
 
 .carousel-control-prev {
-  left: 25%;
+  left: 22%;
 }
 
 .carousel-control-next {
-  right: 25%;
+  right: 22%;
 }
 
 .carousel-control-prev-icon {
@@ -312,5 +312,5 @@ input[type="text"] {
 }
 
 .like-heart i.liked {
-  color: rgb(230, 81, 81) !important;
+  color: rgb(230, 41, 41) !important;
 }
