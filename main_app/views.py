@@ -40,146 +40,105 @@ def logout_view(request):
 
 def home(request):
     chat_id = request.GET.get('chat_id')
-    # GET 요청 부분은 기존과 거의 동일하게 유지됩니다.
-    # ... (GET 요청 처리 로직) ...
+    model_response = ""
 
     if request.method == 'POST':
         user_prompt = request.POST.get('prompt')
-        model_response = ""
-        new_chat_created_for_ajax = False
-        returned_chat_id = chat_id # AJAX 응답에 사용될 chat_id
+        #model_response = query_huggingface_api(user_prompt)
 
-        # --- DemoQA 또는 API 호출로 model_response 생성 ---
         try:
+            # .strip()으로 앞뒤 공백 제거, __iexact로 대소문자 구분 없이 검색
             demo_entry = DemoQA.objects.get(question__iexact=user_prompt.strip())
             model_response = demo_entry.answer
         except DemoQA.DoesNotExist:
             model_response = "죄송합니다, 이 질문에 대해서는 준비된 데모 답변이 없습니다."
         except Exception as e:
-            print(f"DemoQA 조회 중 오류 발생: {e}")
+            # 기타 데이터베이스 조회 오류 등 예외 처리
+            print(f"DemoQA 조회 중 오류 발생: {e}") # 서버 로그에 오류 기록
             model_response = "데모 답변을 가져오는 중 오류가 발생했습니다."
 
-        if model_response:
-            delay_seconds = random.uniform(2.5, 3.0) # AJAX에서는 조금 짧게 해도 체감이 됩니다.
-            print(f"답변 전송 전 {delay_seconds:.2f}초 지연...")
-            time.sleep(delay_seconds)
-
-        # --- 채팅 세션 및 히스토리 저장 로직 (기존 로직 활용) ---
+        if model_response: 
+            delay_seconds = random.uniform(2.0, 3.0) 
+            print(f"답변 전송 전 {delay_seconds:.2f}초 지연...") 
+            time.sleep(delay_seconds)  
+        
         if request.user.is_authenticated:
-            if not chat_id: # 새 채팅 생성
+            if not chat_id:
                 chat_count = ChatSession.objects.filter(user=request.user).count()
-                new_chat_id_val = f"chat_{chat_count + 1}"
-                ChatSession.objects.create(
+                new_chat_id = f"chat_{chat_count + 1}"
+
+                new_session = ChatSession.objects.create(
                     user=request.user,
-                    chat_id=new_chat_id_val,
+                    chat_id=new_chat_id,
                     initial_prompt=user_prompt,
                     history=[
                         {"role": "user", "content": user_prompt},
                         {"role": "model", "content": model_response}
                     ]
                 )
-                returned_chat_id = new_chat_id_val
-                new_chat_created_for_ajax = True
-            else: # 기존 채팅에 추가
-                session_obj = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
-                if not session_obj.initial_prompt:
-                    session_obj.initial_prompt = user_prompt
-                session_obj.history.append({"role": "user", "content": user_prompt})
-                session_obj.history.append({"role": "model", "content": model_response})
-                session_obj.save()
-                returned_chat_id = chat_id
-        else: # 비로그인 사용자 (세션 기반)
+                return redirect(f"/?chat_id={new_chat_id}")
+            else:
+                session = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
+                if not session.initial_prompt:
+                    session.initial_prompt = user_prompt
+                session.history.append({"role": "user", "content": user_prompt})
+                session.history.append({"role": "model", "content": model_response})
+                session.save()
+                return redirect(f"/?chat_id={chat_id}")
+        else:
             if 'chat_sessions' not in request.session:
                 request.session['chat_sessions'] = []
-
-            if not chat_id: # 새 채팅 생성 (비로그인)
-                new_chat_id_val = f"chat_{len(request.session['chat_sessions']) + 1}"
-                new_session_data = {
-                    "chat_id": new_chat_id_val,
+            if not chat_id:
+                chat_id = f"chat_{len(request.session['chat_sessions']) + 1}"
+                new_session = {
+                    "chat_id": chat_id,
                     "initial_prompt": user_prompt,
                     "history": [
                         {"role": "user", "content": user_prompt},
                         {"role": "model", "content": model_response}
                     ]
                 }
-                request.session['chat_sessions'].append(new_session_data)
-                returned_chat_id = new_chat_id_val
-                new_chat_created_for_ajax = True
-            else: # 기존 채팅에 추가 (비로그인)
-                session_updated = False
-                for session_data_item in request.session['chat_sessions']:
-                    if session_data_item['chat_id'] == chat_id:
-                        if not session_data_item.get('initial_prompt'):
-                            session_data_item['initial_prompt'] = user_prompt
-                        session_data_item['history'].append({"role": "user", "content": user_prompt})
-                        session_data_item['history'].append({"role": "model", "content": model_response})
-                        session_updated = True
-                        returned_chat_id = chat_id
-                        break
-                if not session_updated: # 혹시 모를 오류 방지
-                     # 이 경우, 새 채팅을 만들어주거나 오류를 반환할 수 있습니다.
-                     # 여기서는 단순화를 위해 오류를 가정하지 않겠습니다.
-                     pass
-            request.session.modified = True
-
-
-        # --- AJAX 요청인지 확인하고 분기 ---
-        # 'X-Requested-With' 헤더는 많은 JavaScript 라이브러리가 AJAX 요청 시 추가합니다.
-        # 'Accept' 헤더로 'application/json'을 선호한다고 명시할 수도 있습니다.
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
-                  "application/json" in request.META.get('HTTP_ACCEPT', '')
-
-        if is_ajax:
-            return JsonResponse({
-                'user_prompt': user_prompt,
-                'model_response': model_response,
-                'chat_id': returned_chat_id, # 현재 또는 새로 생성된 chat_id
-                'new_chat_created': new_chat_created_for_ajax, # 새 채팅 여부
-                # 필요하다면 전체 히스토리를 보내줄 수도 있지만, 보통은 새 메시지만 보냅니다.
-                # 'history': [...]
-            })
-        else:
-            # AJAX가 아닐 경우 기존의 redirect 방식 사용 (JavaScript 비활성화 대비)
-            if new_chat_created_for_ajax:
-                return redirect(f"/?chat_id={returned_chat_id}")
+                request.session['chat_sessions'].append(new_session)
+                request.session.modified = True
+                return redirect(f"/?chat_id={chat_id}")
             else:
-                return redirect(f"/?chat_id={chat_id if chat_id else returned_chat_id}")
+                for session in request.session['chat_sessions']:
+                    if session['chat_id'] == chat_id:
+                        if not session.get('initial_prompt'):
+                            session['initial_prompt'] = user_prompt
+                        session['history'].append({"role": "user", "content": user_prompt})
+                        session['history'].append({"role": "model", "content": model_response})
+                        request.session.modified = True
+                        break
+                return redirect(f"/?chat_id={chat_id}")
 
-
-    # --- GET 요청 처리 ---
-    # (기존 GET 요청 로직: chat_sessions, selected_chat, recommended_styles, full_name 등 설정)
-    # 이 부분은 AJAX POST 요청과는 별개로, 페이지 초기 로딩 시 사용됩니다.
     if request.user.is_authenticated:
-        chat_sessions_qs = ChatSession.objects.filter(user=request.user).order_by('created_at')
-        full_name = request.user.get_full_name() or request.user.username
+        chat_sessions = ChatSession.objects.filter(user=request.user).order_by('created_at')
+        full_name = request.user.get_full_name()
+        if not full_name:  # full_name이 비어있으면 username 사용
+            full_name = request.user.username
     else:
-        chat_sessions_qs = request.session.get('chat_sessions', [])
+        chat_sessions = request.session.get('chat_sessions', [])
         full_name = None
 
-    selected_chat_data = None
+    selected_chat = None
     if chat_id:
         if request.user.is_authenticated:
-            selected_chat_obj = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
-            selected_chat_data = { # 템플릿에 일관된 형태로 전달하기 위함
-                'chat_id': selected_chat_obj.chat_id,
-                'initial_prompt': selected_chat_obj.initial_prompt,
-                'history': selected_chat_obj.history
-            }
+            selected_chat = get_object_or_404(ChatSession, user=request.user, chat_id=chat_id)
         else:
-            for session_item in chat_sessions_qs:
-                if session_item['chat_id'] == chat_id:
-                    selected_chat_data = session_item
+            for session in chat_sessions:
+                if session['chat_id'] == chat_id:
+                    selected_chat = session
                     break
-    
-    # style_list가 정의되어 있다고 가정합니다. (코드 상단에서 excel 파일 로드)
-    recommended_styles = random.sample(style_list, min(len(style_list), 3)) if style_list else []
 
+    # 랜덤 추천 스타일 3개 뽑기
+    recommended_styles = random.sample(style_list, 3)
 
     return render(request, 'home.html', {
-        'chat_sessions': chat_sessions_qs,
-        'selected_chat': selected_chat_data,
+        'chat_sessions': chat_sessions,
+        'selected_chat': selected_chat,
         'recommended_styles': recommended_styles,
-        'full_name': full_name,
+        'full_name': full_name, 
     })
 
 
