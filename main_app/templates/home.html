@@ -27,7 +27,7 @@
 <!-- nav -->
 <nav class="navbar bg-white border-bottom px-3" style="padding: 12px 0px;">
   <a class="navbar-brand text-dark fw-bold" href="{% url 'home' %}">
-    <img src="{% static 'images/logo2.png' %}" alt="logo" style="width: 140px; height: 32px; margin-left: 6px;">
+    <img src="{% static 'images/logo5.png' %}" alt="logo" style="width: 150px; height: 32px; margin-left: 10px;">
   </a>
   <div class="ms-auto">
     {% if user.is_authenticated %}
@@ -124,7 +124,7 @@
     <!-- 입력 폼 -->
     <form method="POST" action="{% if selected_chat %}/?chat_id={{ selected_chat.chat_id }}{% else %}/{% endif %}" class="d-flex gap-2 p-3 bg-white" style="position: sticky; bottom: 0; height: 150px;">
       {% csrf_token %}
-      <input type="text" name="prompt" class="form-control bg-light text-dark border" placeholder="그리고 싶은 그림에 대해 적어주세요" required>
+      <input type="text" name="prompt" id="prompt-input" class="form-control bg-light text-dark border" placeholder="그리고 싶은 그림에 대해 적어주세요" required>
       <button type="submit" class="btn btn-dark"><i class="fa-solid fa-arrow-up"></i></button>
     </form>
   </div>
@@ -408,7 +408,7 @@ function showToast(message, type = 'success') {
 
 function showLoadingBubble(chatBox) {
   const loadingWrapper = document.createElement("div");
-  loadingWrapper.className = "chat-bubble-wrapper";
+  loadingWrapper.className = "chat-bubble-wrapper loading-bubble-wrapper";
 
   loadingWrapper.innerHTML = `
     <div class="d-flex align-items-center" style="gap: 10px;">
@@ -420,11 +420,64 @@ function showLoadingBubble(chatBox) {
       </div>
     </div>
   `;
-
   chatBox.appendChild(loadingWrapper);
-
+  chatBox.scrollTop = chatBox.scrollHeight;
   return loadingWrapper;
 }
+
+// --- 여기에 있던 첫 번째 showLoadingBubble 함수 정의는 삭제 ---
+
+document.addEventListener("DOMContentLoaded", function() {
+  const chatForm = document.getElementById('chat-form');
+  const chatBox = document.getElementById('chat-box');
+  const promptInput = document.getElementById('prompt-input');
+
+  if (chatForm && chatBox && promptInput) {
+    chatForm.addEventListener('submit', function(event) {
+      const userPromptText = promptInput.value.trim();
+      if (userPromptText === "") {
+        return;
+      }
+
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble user';
+      userBubble.textContent = userPromptText;
+      chatBox.appendChild(userBubble);
+
+      showLoadingBubble(chatBox);
+
+      // promptInput.value = "";
+    });
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+  const chatForm = document.getElementById('chat-form'); // 이제 ID가 있으므로 선택 가능
+  const chatBox = document.getElementById('chat-box');
+  const promptInput = document.getElementById('prompt-input'); // 이제 ID가 있으므로 선택 가능
+
+  if (chatForm && chatBox && promptInput) {
+    chatForm.addEventListener('submit', function(event) {
+      // 🚨 중요: AJAX를 사용하려면 기본 폼 제출을 막아야 합니다!
+      event.preventDefault(); // 이 줄의 주석을 해제하고 활성화해야 합니다.
+
+      const userPromptText = promptInput.value.trim();
+      if (userPromptText === "") {
+        return;
+      }
+
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble user';
+      userBubble.textContent = userPromptText;
+      chatBox.appendChild(userBubble);
+      chatBox.scrollTop = chatBox.scrollHeight; // 스크롤 추가
+
+      // 로딩 버블 표시 (이 함수는 이미 잘 정의되어 있는 것 같습니다)
+      const loadingBubbleElement = showLoadingBubble(chatBox); 
+
+    });
+  }
+});
 
 
 </script>
