@@ -7,5 +7,26 @@
     "answer": "Create an image featuring a cute cat wearing a fish-shaped hood over its head its main subject against the backdrop of night ocean a metal factory illuminated by glowing metal plants located next to a factory. The scene should be filled with vibrant energy and show a harmonious fusion between technology and nature through intricate details that evoke both excitement and peace. Use bold lines and bright color palettes to emphasize intensity while maintaining depth and dimensionality. Emphasize dynamic movement as cats naturally leap around their surroundings symbolizing freedom and joy amidst technological marvels. Incorporate elements like colorful water droplets or sparks for added visual interest without overwhelming the main theme. Please ensure the composition is balanced but still captures the essence of dynamism and beauty within this unique setting using MidJourneys advanced features such as realistic textures and light effects.",
     "category": null
   }
+},
+
+{
+  "model": "main_app.demoqa",
+  "pk": 2,
+  "fields": {
+    "question": "빵 굽는 고양이를 그리고 싶어",
+    "answer": "a fluffy cat baking bread on a campfire in the middle of a forest, surrounded by trees and woodland creatures, rustic tools, cozy lighting, fantasy illustration style.",
+    "category": null
+  }
+},
+
+{
+  "model": "main_app.demoqa",
+  "pk": 3,
+  "fields": {
+    "question": "배경이 주방이었으면 좋겠어",
+    "answer": "a tiny orange tabby cat baking pastries in a whimsical cottage kitchen, antique oven glowing warmly, enchanted utensils floating mid-air, jars of jam and butter stacked beside a steaming teapot, braided bread cooling on a windowsill, golden hour sunlight bathing the room, storybook-style fantasy illustration.",
+    "category": null
+  }
 }
 ]
+
